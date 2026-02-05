@@ -1,8 +1,25 @@
-# SVT-UAV-GCS (Secure Vision Telemetry)
+# 🚁 SVT-UAV-GCS (Secure Vision Telemetry)
+
+<div align="center">
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Status](https://img.shields.io/badge/status-Active-success.svg)
+![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)
 ![Tech](https://img.shields.io/badge/tech-C%23%20%7C%20Python%20%7C%20AI-purple.svg)
+![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg)
+![YOLO](https://img.shields.io/badge/YOLOv8-Ultralytics-00FFFF.svg)
+
+**⚠️ Bu proje aktif geliştirme aşamasındadır. Son hali değildir.**
+
+[Türkçe](#-türkçe) | [English](#-english)
+
+</div>
+
+---
+
+# 🇹🇷 TÜRKÇE
+
+## 📋 Proje Hakkında
 
 **SVT GCS**; **ASP.NET Core MVC** ve **Python** mimarisi üzerine inşa edilmiş, **Çoklu İHA (Multi-UAV)** desteğine sahip, gelişmiş ve güvenli bir İHA Yer Kontrol İstasyonudur.
 
@@ -12,32 +29,100 @@ Bu proje, görüntü işleme ve yapay zeka algoritmalarını **sanal ortam (virt
 
 ## 🚀 Öne Çıkan Özellikler
 
-* **🚁 Çoklu İHA Desteği (Multi-UAV Support):** Sistem, aynı anda birden fazla İHA'nın bağlanmasına, verilerinin ayrı ayrı işlenmesine ve yönetilmesine olanak tanır. Her İHA kendi kimliği (ID) ile takip edilir.
-* **📡 Gerçek Zamanlı Telemetri:** İHA'lardan gelen irtifa, hız, batarya, konum ve sinyal verileri **SignalR** (WebSocket) teknolojisi ile gecikmesiz olarak arayüze aktarılır.
-* **🧠 Yapay Zeka & Görüntü İşleme:**
-    * **Nesne Tespiti:** **YOLO (You Only Look Once)** algoritması ile araç, insan ve diğer nesneler anlık tespit edilir.
-    * **Plaka Tanıma (LPR):** **EasyOCR** derin öğrenme modelleri kullanılarak araç plakaları okunur ve arananlar listesiyle karşılaştırılır.
-* **🔒 Güvenli Veri İletimi:** İHA ve Yer İstasyonu arasındaki tüm veri paketleri, özel şifreleme algoritmaları ile korunarak TCP soketleri üzerinden iletilir.
-* **💻 Sanal Ortam Mimarisi:** Python modülleri, kararlılık ve bağımlılık yönetimi için izole edilmiş sanal ortam (venv/conda) üzerinde geliştirilmiştir.
-* **🌍 Dinamik Harita ve Raporlama:**
-    * Canlı GPS takibi (**Leaflet.js**).
-    * Tehdit unsurlarının koordinat bazlı loglanması.
-    * Görev sonrası PDF/Excel formatında detaylı rapor dökümü.
+### 🚁 Çoklu İHA Desteği (Multi-UAV Support)
+Sistem, aynı anda birden fazla İHA'nın bağlanmasına, verilerinin ayrı ayrı işlenmesine ve yönetilmesine olanak tanır. Her İHA kendi kimliği (ID) ile takip edilir ve otomatik port ataması yapılır:
+- `UAV-001` → Port 5050
+- `UAV-002` → Port 5051
+- `UAV-003` → Port 5052
+
+### 📡 Gerçek Zamanlı Telemetri
+İHA'lardan gelen irtifa, hız, batarya, konum ve sinyal verileri **SignalR** (WebSocket) teknolojisi ile gecikmesiz olarak arayüze aktarılır.
+
+### 🧠 Yapay Zeka & Görüntü İşleme
+- **Nesne Tespiti:** **YOLOv8 (Ultralytics)** algoritması ile araç, insan ve diğer nesneler anlık tespit edilir.
+- **Plaka Tanıma (LPR):** **EasyOCR** derin öğrenme modelleri kullanılarak araç plakaları okunur ve arananlar listesiyle karşılaştırılır.
+- **Tehdit Algılama:** Aranan plaka tespiti ve bölgesel yoğunluk analizi ile iki katmanlı tehdit sistemi.
+
+### 🔒 Güvenli Veri İletimi
+İHA ve Yer İstasyonu arasındaki tüm veri paketleri, **AES-256 CBC** şifreleme algoritması ile korunarak TCP soketleri üzerinden iletilir.
+
+### 💻 Sanal Ortam Mimarisi
+Python modülleri, kararlılık ve bağımlılık yönetimi için izole edilmiş sanal ortam (venv) üzerinde geliştirilmiştir.
+
+### 🎥 Canlı Video Akışı
+- Flask tabanlı MJPEG streaming
+- Her İHA için ayrı video kanalı
+- Anlık snapshot yakalama API'si
+
+### 🌍 Dinamik Harita ve Raporlama
+- Canlı GPS takibi (**Leaflet.js**)
+- Tehdit unsurlarının koordinat bazlı loglanması
+- Görev sonrası **PDF/Excel** formatında detaylı rapor dökümü (**QuestPDF**)
+
+### 📊 İnteraktif Dashboard
+- Telemetri widget'ları (Batarya, İrtifa, Hız, Pusula, Sinyal, Uçuş Süresi)
+- Gerçek zamanlı grafikler (**Chart.js**)
+- İHA bazlı filtreleme ve istatistikler
+- Aranan plaka yönetim paneli
 
 ---
 
 ## 🛠️ Kullanılan Teknolojiler
 
 ### Backend (GCS Modülü)
-* **Dil:** C# (.NET 8.0)
-* **Çatı:** ASP.NET Core MVC
-* **İletişim:** SignalR (Real-time), TCP Sockets
-* **Veritabanı:** Entity Framework Core
+| Teknoloji | Açıklama |
+|-----------|----------|
+| **C# (.NET 8.0)** | Ana programlama dili |
+| **ASP.NET Core MVC** | Web framework |
+| **SignalR** | Gerçek zamanlı WebSocket iletişimi |
+| **Entity Framework Core** | Veritabanı ORM |
+| **QuestPDF** | PDF rapor oluşturma |
+| **SQLite** | Veritabanı |
 
 ### AI & Vision (İHA Modülü)
-* **Dil:** Python 3.x
-* **Kütüphaneler:** OpenCV, Ultralytics YOLOv8, EasyOCR, PyTorch
-* **Ortam:** Virtual Environment (venv)
+| Teknoloji | Açıklama |
+|-----------|----------|
+| **Python 3.10+** | Ana programlama dili |
+| **OpenCV** | Görüntü işleme |
+| **Ultralytics YOLOv8** | Nesne tespiti ve takibi |
+| **EasyOCR** | Optik karakter tanıma (Plaka okuma) |
+| **Flask** | Video streaming sunucusu |
+| **PyCryptodome** | AES-256 şifreleme |
+
+### Frontend
+| Teknoloji | Açıklama |
+|-----------|----------|
+| **Bootstrap 5** | UI framework |
+| **Leaflet.js** | İnteraktif harita |
+| **Chart.js** | Grafikler |
+| **SignalR Client** | Gerçek zamanlı veri alımı |
+
+---
+
+## 📁 Proje Yapısı
+
+```
+SVT-UAV-GCS/
+│
+├── 📂 UAV_Module_Python/           # İHA Tarafı (Python)
+│   ├── uav_module.py               # Ana modül (YOLO + OCR + Flask)
+│   ├── config.py                   # Yapılandırma ayarları
+│   ├── security_utils.py           # AES-256 şifreleme
+│   ├── gps_simulator.py            # GPS koordinat simülasyonu
+│   ├── telemetry_simulator.py      # Telemetri veri simülasyonu
+│   ├── requirements.txt            # Python bağımlılıkları
+│   └── yolov8n.pt                  # YOLO model dosyası
+│
+├── 📂 GCS_Module/                   # Yer İstasyonu (C# ASP.NET Core)
+│   ├── 📂 Controllers/             # MVC Controller'lar
+│   ├── 📂 Models/                  # Veri modelleri
+│   ├── 📂 Services/                # Arka plan servisleri
+│   ├── 📂 Views/                   # Razor view'ları
+│   ├── 📂 Hubs/                    # SignalR hub
+│   └── Program.cs                  # Uygulama giriş noktası
+│
+└── README.md                        # Bu dosya
+```
 
 ---
 
@@ -45,93 +130,244 @@ Bu proje, görüntü işleme ve yapay zeka algoritmalarını **sanal ortam (virt
 
 Bu proje **Sanal Ortam (Virtual Environment)** kullanılarak geliştirilmiştir. Lütfen aşağıdaki adımları takip edin:
 
-1.  **Repoyu Klonlayın:**
-    ```bash
-    git clone [https://github.com/umutugrasan/SVT-UAV-GCS.git](https://github.com/umutugrasan/SVT-UAV-GCS.git)
-    ```
+### 1️⃣ Repoyu Klonlayın
 
-2.  **GCS Modülünü (C#) Başlatın:**
-    `GCS_Module` klasörünü Visual Studio 2022 ile açın ve IIS Express üzerinden çalıştırın.
+```bash
+git clone https://github.com/umutugrasan/SVT-UAV-GCS.git
+cd SVT-UAV-GCS
+```
 
-3.  **İHA Modülünü (Python) Başlatın:**
-    Python bağımlılıklarının çakışmaması için sanal ortam kurmanız önerilir.
+### 2️⃣ GCS Modülünü (C#) Başlatın
 
-    ```bash
-    cd UAV_Module
-    
-    # Sanal ortamı oluştur (Sadece ilk seferde)
-    python -m venv venv
+**Visual Studio 2022 ile:**
+1. `GCS_Module` klasörünü Visual Studio 2022 ile açın
+2. NuGet paketlerini restore edin
+3. IIS Express veya Kestrel üzerinden çalıştırın
 
-    # Sanal ortamı aktif et (Windows)
-    .\venv\Scripts\activate
+**Komut Satırı ile:**
+```bash
+cd GCS_Module
 
-    # Kütüphaneleri yükle
-    pip install -r requirements.txt
+# Bağımlılıkları yükle
+dotnet restore
 
-    # Modülü başlat
-    python main.py
-    ```
+# Veritabanı migration'larını uygula
+dotnet ef database update
+
+# Uygulamayı başlat
+dotnet run
+```
+
+Tarayıcıda `http://localhost:5000` adresini açın.
+
+**Varsayılan Giriş Bilgileri:**
+- 👤 Kullanıcı Adı: `admin`
+- 🔑 Şifre: `admin123`
+
+### 3️⃣ İHA Modülünü (Python) Başlatın
+
+Python bağımlılıklarının çakışmaması için sanal ortam kurmanız **zorunludur**.
+
+```bash
+cd UAV_Module_Python
+
+# Sanal ortamı oluştur (Sadece ilk seferde)
+python -m venv venv
+
+# Sanal ortamı aktif et
+# Windows:
+.\venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
+# Kütüphaneleri yükle
+pip install -r requirements.txt
+
+# Varsayılan İHA'yı başlat (UAV-001)
+python uav_module.py
+```
+
+### 4️⃣ Çoklu İHA Çalıştırma (Opsiyonel)
+
+Her İHA için ayrı terminal açın:
+
+```bash
+# Terminal 1 - UAV-001 (Port 5050)
+python uav_module.py
+
+# Terminal 2 - UAV-002 (Port 5051)
+python uav_module.py --id UAV-002 --name "Bravo-2"
+
+# Terminal 3 - UAV-003 (Port 5052)
+python uav_module.py --id UAV-003 --name "Charlie-3" --video baska_video.mp4
+```
 
 ---
 
-## 👨‍💻 Geliştirici
+## 📡 API Endpoint'leri
 
-**Umut Uğraşan** tarafından geliştirilmiştir.
+### Python Flask (İHA Modülü)
+| Endpoint | Method | Açıklama |
+|----------|--------|----------|
+| `/video_feed` | GET | MJPEG canlı video akışı |
+| `/snapshot` | GET | Anlık JPEG görüntü |
+| `/update_wanted` | POST | Aranan plaka listesini güncelle |
 
-
-
+### C# ASP.NET (Yer İstasyonu)
+| Endpoint | Method | Açıklama |
+|----------|--------|----------|
+| `/` | GET | Ana dashboard |
+| `/Account/Login` | POST | Kullanıcı girişi |
+| `/Report/GeneratePdf` | POST | PDF rapor oluştur |
+| `/Report/GenerateExcel` | POST | CSV rapor oluştur |
+| `/targetHub` | WebSocket | SignalR bağlantısı |
 
 ---
 
-# SVT-UAV-GCS (Secure Vision Telemetry) - English Description
+## 🔮 Gelecek Geliştirmeler
 
-**SVT GCS** is an advanced, secure UAV Ground Control Station built on **ASP.NET Core MVC** and **Python**, featuring robust **Multi-UAV support**.
+- [ ] 3D Harita Entegrasyonu (CesiumJS)
+- [ ] Drone Rota Planlama
+- [ ] Çoklu Kamera Grid Görünümü
+- [ ] Mobil Uygulama Desteği
+- [ ] Docker Containerization
+- [ ] Kubernetes Deployment
 
-The project was developed using a **virtual environment** architecture to isolate image processing and AI algorithms, ensuring high stability and preventing dependency conflicts.
+---
+
+# 🇬🇧 ENGLISH
+
+## 📋 About Project
+
+**SVT GCS** is an advanced and secure UAV Ground Control Station built on **ASP.NET Core MVC** and **Python** architecture, with **Multi-UAV** support.
+
+This project isolates image processing and AI algorithms on a **virtual environment**, preventing version conflicts and ensuring high stability.
+
+**⚠️ This project is under active development. This is not the final version.**
 
 ---
 
 ## 🚀 Key Features
 
-* **🚁 Multi-UAV Support:** The system supports simultaneous connections from multiple UAVs. Each drone is tracked, managed, and processed independently with unique IDs.
-* **📡 Real-Time Telemetry:** Live data such as altitude, speed, battery, and GPS location is transmitted instantly to the dashboard via **SignalR** (WebSocket).
-* **🧠 AI & Computer Vision:**
-    * **Object Detection:** Real-time detection of vehicles and people using **YOLO**.
-    * **License Plate Recognition (LPR):** Automatic reading of license plates using **EasyOCR** (Deep Learning based) and matching against wanted lists.
-* **🔒 Secure Communication:** All data transmission between the UAV and GCS is encrypted and transmitted over TCP sockets.
-* **💻 Virtual Environment Architecture:** Python modules are developed within an isolated virtual environment (venv) to ensure dependency stability.
-* **🌍 Dynamic Dashboard:**
-    * Live GPS tracking on **Leaflet.js** maps.
-    * Threat logging with precise coordinates.
-    * Post-mission reporting in PDF/Excel formats.
+### 🚁 Multi-UAV Support
+The system allows multiple UAVs to connect simultaneously, with separate data processing and management. Each UAV is tracked with its own ID and automatic port assignment:
+- `UAV-001` → Port 5050
+- `UAV-002` → Port 5051
+- `UAV-003` → Port 5052
+
+### 📡 Real-Time Telemetry
+Altitude, speed, battery, position, and signal data from UAVs are transmitted to the interface without delay using **SignalR** (WebSocket) technology.
+
+### 🧠 AI & Image Processing
+- **Object Detection:** Real-time detection of vehicles, people, and other objects using **YOLOv8 (Ultralytics)**.
+- **License Plate Recognition (LPR):** Vehicle plates are read using **EasyOCR** deep learning models and compared with wanted list.
+- **Threat Detection:** Two-layer threat system with wanted plate detection and regional density analysis.
+
+### 🔒 Secure Data Transmission
+All data packets between UAV and Ground Station are protected with **AES-256 CBC** encryption and transmitted over TCP sockets.
+
+### 💻 Virtual Environment Architecture
+Python modules are developed on isolated virtual environment (venv) for stability and dependency management.
+
+### 🎥 Live Video Streaming
+- Flask-based MJPEG streaming
+- Separate video channel for each UAV
+- Instant snapshot capture API
+
+### 🌍 Dynamic Map and Reporting
+- Live GPS tracking (**Leaflet.js**)
+- Coordinate-based logging of threat elements
+- Post-mission detailed reports in **PDF/Excel** format (**QuestPDF**)
 
 ---
 
-## 🔧 Installation & Setup
+## 🔧 Installation and Running
 
-This project relies on a **Virtual Environment** for the Python module.
+### 1️⃣ Clone the Repository
 
-1.  **Clone the repo:**
-    ```bash
-    git clone [https://github.com/umutugrasan/SVT-UAV-GCS.git](https://github.com/umutugrasan/SVT-UAV-GCS.git)
-    ```
+```bash
+git clone https://github.com/umutugrasan/SVT-UAV-GCS.git
+cd SVT-UAV-GCS
+```
 
-2.  **Run GCS Module (C#):**
-    Open `GCS_Module` in Visual Studio and run via IIS Express.
+### 2️⃣ Start GCS Module (C#)
 
-3.  **Run UAV Module (Python):**
-    ```bash
-    cd UAV_Module
-    
-    # Create virtual environment (First time only)
-    python -m venv venv
+```bash
+cd GCS_Module
+dotnet restore
+dotnet ef database update
+dotnet run
+```
 
-    # Activate virtual environment (Windows)
-    .\venv\Scripts\activate
+Open `http://localhost:5000` in browser.
 
-    # Install dependencies
-    pip install -r requirements.txt
+**Default Login:**
+- 👤 Username: `admin`
+- 🔑 Password: `admin123`
 
-    # Run the module
-    python main.py
-    ```
+### 3️⃣ Start UAV Module (Python)
+
+```bash
+cd UAV_Module_Python
+
+# Create virtual environment (first time only)
+python -m venv venv
+
+# Activate virtual environment
+# Windows:
+.\venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start default UAV
+python uav_module.py
+```
+
+### 4️⃣ Running Multiple UAVs
+
+```bash
+# Terminal 1 - UAV-001 (Port 5050)
+python uav_module.py
+
+# Terminal 2 - UAV-002 (Port 5051)
+python uav_module.py --id UAV-002 --name "Bravo-2"
+
+# Terminal 3 - UAV-003 (Port 5052)
+python uav_module.py --id UAV-003 --name "Charlie-3"
+```
+
+---
+
+## 🔮 Future Developments
+
+- [ ] 3D Map Integration (CesiumJS)
+- [ ] Drone Route Planning
+- [ ] Multi-Camera Grid View
+- [ ] Mobile App Support
+- [ ] Docker Containerization
+- [ ] Kubernetes Deployment
+
+---
+
+## 👨‍💻 Geliştirici / Developer
+
+<div align="center">
+
+**Umut Uğraşan**
+
+[![GitHub](https://img.shields.io/badge/GitHub-umutugrasan-181717?style=for-the-badge&logo=github)](https://github.com/umutugrasan)
+
+</div>
+
+---
+
+<div align="center">
+
+**⭐ Bu projeyi beğendiyseniz yıldız vermeyi unutmayın! ⭐**
+
+**⭐ If you liked this project, don't forget to give it a star! ⭐**
+
+</div>
