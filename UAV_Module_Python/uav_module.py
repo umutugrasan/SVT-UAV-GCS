@@ -1,6 +1,6 @@
 import easyocr
-import re
 import threading
+import queue
 from flask import Flask, Response, request
 import cv2
 import os
@@ -17,8 +17,47 @@ from telemetry_simulator import TelemetrySimulator
 from config import Config
 
 # Global Arananlar Listesi (Varsayılan boş veya test amaçlı dolu olabilir)
-WANTED_PLATES = [] 
+WANTED_PLATES = []
 plate_lock = threading.Lock() # Çakışmayı önlemek için kilit
+
+# --- ASENKRON OCR (PLAKA OKUMA) ---
+# OCR ağır olduğu için ana görüntü döngüsünü bloklamasın diye ayrı bir iş parçacığında
+# çalışır. Ana döngü sadece kırpılmış aracı kuyruğa atar ve en son bilinen plaka sonucunu
+# önbellekten okur. Böylece video akışı asla donmaz.
+ocr_queue = queue.Queue(maxsize=8)     # işlenmeyi bekleyen araç kırpıntıları
+plate_cache = {}                       # track_id -> {"plate": str, "ts": float}
+plate_cache_lock = threading.Lock()
+
+
+def _normalize_plate(s):
+    """Plakayı karşılaştırma için sadeleştir: sadece harf+rakam, büyük harf."""
+    return ''.join(ch for ch in s.upper() if ch.isalnum())
+
+
+def is_plate_wanted(detected_text):
+    """
+    OCR gerçek videoda plakayı asla birebir temiz okuyamaz (harf/rakam eksik/yanlış olur).
+    Bu yüzden ESNEK eşleştirme yapılır: aranan plaka okunan metnin içinde geçiyorsa
+    (veya tersi), ya da rakam çekirdekleri aynıysa TEHDİT sayılır.
+    """
+    ct = _normalize_plate(detected_text)
+    if len(ct) < 4:
+        return False
+    with plate_lock:
+        wanted = list(WANTED_PLATES)
+    ct_digits = ''.join(c for c in ct if c.isdigit())
+    for w in wanted:
+        wn = _normalize_plate(w)
+        if len(wn) < 4:
+            continue
+        # 1) tam eşleşme veya biri diğerini içeriyor
+        if wn == ct or wn in ct or ct in wn:
+            return True
+        # 2) rakam çekirdeği eşleşiyor (örn. aranan "34CSH571" ↔ okunan "CSH 571 X")
+        wn_digits = ''.join(c for c in wn if c.isdigit())
+        if len(wn_digits) >= 3 and wn_digits == ct_digits:
+            return True
+    return False
 
 
 # Logging sistemi
@@ -110,6 +149,51 @@ def update_wanted():
 def start_flask(port_num):
     app.run(host="0.0.0.0", port=port_num, debug=False, use_reloader=False, threaded=True)
     
+def ocr_worker(reader):
+    """
+    Arka planda çalışır: kuyruktan (track_id, araç_görüntüsü) alır, plakayı okur ve
+    sonucu plate_cache'e yazar. Ana döngü bu iş parçacığını beklemez.
+    """
+    while True:
+        try:
+            track_id, roi = ocr_queue.get()
+        except Exception:
+            continue
+        try:
+            if roi is not None and roi.size > 0:
+                detections = reader.readtext(roi, detail=0)
+                for text in detections:
+                    clean_text = text.replace(" ", "").upper()
+                    # Basit plaka kontrolü (6-9 karakter ve en az bir rakam)
+                    if 6 <= len(clean_text) <= 9 and any(c.isdigit() for c in clean_text):
+                        with plate_cache_lock:
+                            plate_cache[track_id] = {"plate": text.upper(), "ts": time.time()}
+                        # OCR'ın ne okuduğunu görebilmen için logla (aranan listeye ekleyeceğin metin)
+                        logging.info(f"🔤 OCR okudu (ID {track_id}): {text.upper()}")
+                        break
+        except Exception:
+            pass  # OCR hatası olursa iş parçacığı çökmesin
+        finally:
+            ocr_queue.task_done()
+
+
+def connect_to_gcs(uav_name):
+    """
+    GCS'e (C# sunucusu) tek bir bağlantı denemesi yapar.
+    Başarılıysa bağlı socket, başarısızsa None döner.
+    Bağlantı denemesine timeout konur ki sunucu kapalıyken video akışı kilitlenmesin.
+    """
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(Config.CONNECTION_TIMEOUT)  # bağlanma denemesi kısa sürsün
+        s.connect((Config.SERVER_IP, Config.SERVER_PORT))
+        s.settimeout(None)  # gönderimler için normal (bloklayan) moda dön
+        logging.info(f"🔗 [{uav_name}] GCS BAĞLANTISI AKTİF: {Config.SERVER_IP}:{Config.SERVER_PORT}")
+        return s
+    except Exception:
+        return None
+
+
 def send_batch_data(client_socket, batch_data, uav_name):
     max_retries = 3
     for attempt in range(max_retries):
@@ -140,21 +224,25 @@ def start_uav_vision(video_name, uav_id, uav_name):
 
     window_name = f"UAV Vision - {uav_name} ({uav_id})"
     
-    # --- SOCKET BAĞLANTISI ---
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    connected = False
-    try:
-        client_socket.connect((Config.SERVER_IP, Config.SERVER_PORT))
-        logging.info(f"🔗 [{uav_name}] GCS BAĞLANTISI AKTİF: {Config.SERVER_IP}")
-        connected = True
-    except:
-        logging.warning(f"⚠️ [{uav_name}] GCS Offline. Veriler yerel loga yazılıyor.")
+    # --- SOCKET BAĞLANTISI (otomatik yeniden bağlanmalı) ---
+    client_socket = connect_to_gcs(uav_name)
+    connected = client_socket is not None
+    if not connected:
+        logging.warning(f"⚠️ [{uav_name}] GCS Offline. Arka planda otomatik bağlanmaya çalışılacak...")
+    last_reconnect_attempt = time.time()
+    RECONNECT_INTERVAL = 3  # saniyede bir yeniden bağlanma denemesi
     
     # --- OCR MOTORUNU BAŞLAT (YENİ) ---
     print("👀 OCR Motoru Yükleniyor... (Lütfen bekleyin)")
     # Eğer NVIDIA Ekran Kartın Varsa gpu=True yap, yoksa False kalsın
-    reader = easyocr.Reader(['en'], gpu=False) 
+    reader = easyocr.Reader(['en'], gpu=False)
     print("✅ OCR Motoru Hazır!")
+
+    # OCR'ı arka planda çalıştıran iş parçacığını başlat (video donmasını engeller)
+    ocr_thread = threading.Thread(target=ocr_worker, args=(reader,), daemon=True)
+    ocr_thread.start()
+    last_ocr_submit = {}          # track_id -> son OCR'a gönderilen frame numarası
+    OCR_SUBMIT_INTERVAL = 15      # her araç için kaç karede bir OCR denensin
     
 
     # --- MODEL YÜKLEME ---
@@ -188,7 +276,8 @@ def start_uav_vision(video_name, uav_id, uav_name):
                 logging.warning(f"⚠️ [{uav_name}] DÜŞÜK BATARYA: {telemetry_data['battery']:.1f}%")
             
             # --- NESNE TAKİBİ ---
-            results = model.track(frame, persist=True, conf=Config.CONFIDENCE_THRESHOLD, imgsz=640, verbose=False)
+            # CPU'da akıcılık için imgsz 480 (640 yerine); araç tespiti için yeterli.
+            results = model.track(frame, persist=True, conf=Config.CONFIDENCE_THRESHOLD, imgsz=480, verbose=False)
             
             current_frame_targets = 0
             
@@ -210,37 +299,30 @@ def start_uav_vision(video_name, uav_id, uav_name):
                         # SADECE ARAÇLARDA PLAKA OKU
                         if name in ['car', 'truck', 'bus']:
                             current_frame_targets += 1
-                            
-                            # --- OCR İŞLEMİ (Her 10 Karede Bir Yap) ---
-                            if frame_counter % 10 == 0:
-                                try:
-                                    # Resim sınırlarını kontrol et
-                                    h_img, w_img, _ = frame.shape
-                                    y1_c, y2_c = max(0, y1), min(h_img, y2)
-                                    x1_c, x2_c = max(0, x1), min(w_img, x2)
-                                    
-                                    # Arabayı kırp (Crop)
-                                    car_roi = frame[y1_c:y2_c, x1_c:x2_c]
-                                    
-                                    if car_roi.size > 0:
-                                        # Yazıyı oku
-                                        detections = reader.readtext(car_roi, detail=0)
-                                        
-                                        for text in detections:
-                                            # Yazıyı temizle (boşlukları sil, büyüt)
-                                            clean_text = text.replace(" ", "").upper()
-                                            
-                                            # Basit plaka kontrolü (6-9 karakter ve sayı içermeli)
-                                            if 6 <= len(clean_text) <= 9 and any(c.isdigit() for c in clean_text):
-                                                detected_plate = text.upper() # Orijinal formatı sakla
-                                                
-                                                # Arananlar listesinde mi?
-                                                if clean_text in WANTED_PLATES:
-                                                    is_wanted_plate = True
-                                                    print(f"🚨 DİKKAT! ARANAN PLAKA: {detected_plate}")
-                                                break # İlk geçerli plakayı al ve çık
-                                except Exception as e:
-                                    pass # OCR hatası olursa program durmasın
+
+                            # --- ASENKRON OCR: aracı kuyruğa at (ana döngü BEKLEMEZ) ---
+                            last = last_ocr_submit.get(obj_id, -OCR_SUBMIT_INTERVAL)
+                            if frame_counter - last >= OCR_SUBMIT_INTERVAL:
+                                h_img, w_img, _ = frame.shape
+                                y1_c, y2_c = max(0, y1), min(h_img, y2)
+                                x1_c, x2_c = max(0, x1), min(w_img, x2)
+                                car_roi = frame[y1_c:y2_c, x1_c:x2_c]
+                                if car_roi.size > 0:
+                                    try:
+                                        ocr_queue.put_nowait((obj_id, car_roi.copy()))
+                                        last_ocr_submit[obj_id] = frame_counter
+                                    except queue.Full:
+                                        pass  # kuyruk doluysa bu kareyi atla, video akmaya devam etsin
+
+                            # En son bilinen plaka sonucunu önbellekten oku
+                            with plate_cache_lock:
+                                cached = plate_cache.get(obj_id)
+                            if cached:
+                                detected_plate = cached["plate"]
+                                # Aranan mı? (esnek eşleşme + güncel liste - sonradan eklesen bile yanar)
+                                is_wanted_plate = is_plate_wanted(detected_plate)
+                                if is_wanted_plate:
+                                    print(f"🚨 DİKKAT! ARANAN PLAKA: {detected_plate}")
 
                         # GPS Hesapla
                         cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
@@ -284,15 +366,44 @@ def start_uav_vision(video_name, uav_id, uav_name):
             with lock:
                 outputFrame = frame.copy()
 
+            # --- OTOMATİK YENİDEN BAĞLANMA ---
+            # GCS kapalı/koptuysa program çökmez; arka planda periyodik olarak yeniden dener.
+            if not connected and (time.time() - last_reconnect_attempt >= RECONNECT_INTERVAL):
+                last_reconnect_attempt = time.time()
+                client_socket = connect_to_gcs(uav_name)
+                if client_socket is not None:
+                    connected = True
+                    logging.info(f"🔄 [{uav_name}] GCS'e yeniden bağlanıldı.")
+                    detection_buffer.clear()  # bağlantı yokken biriken eski veriyi at
+
+            # Bağlantı yokken tampon sonsuza kadar büyümesin (bellek koruması)
+            if not connected and len(detection_buffer) > Config.MAX_BATCH_SIZE:
+                detection_buffer = detection_buffer[-Config.MAX_BATCH_SIZE:]
+
+            # Plaka önbelleği ve OCR takibini periyodik temizle (bellek koruması)
+            if frame_counter % 300 == 0:
+                now_ts = time.time()
+                with plate_cache_lock:
+                    for tid in [k for k, v in plate_cache.items() if now_ts - v["ts"] > 60]:
+                        plate_cache.pop(tid, None)
+                for tid in [k for k, v in last_ocr_submit.items() if frame_counter - v > 300]:
+                    last_ocr_submit.pop(tid, None)
+
             # --- BATCH GÖNDERİM ---
             if (time.time() - last_send_time >= Config.BATCH_INTERVAL) and detection_buffer and connected:
-                if not send_batch_data(client_socket, detection_buffer, uav_name):
-                    logging.error(f"❌ [{uav_name}] Sunucu bağlantısı koptu!")
+                if send_batch_data(client_socket, detection_buffer, uav_name):
+                    detection_buffer.clear()
+                    last_send_time = time.time()
+                else:
+                    # Gönderim başarısız: bağlantıyı kapalı işaretle, çökme YOK, sonra tekrar bağlanılır.
+                    logging.error(f"❌ [{uav_name}] Sunucu bağlantısı koptu! Otomatik yeniden bağlanma bekleniyor...")
                     connected = False
-                    break 
-                
-                detection_buffer.clear()
-                last_send_time = time.time()
+                    try:
+                        client_socket.close()
+                    except Exception:
+                        pass
+                    client_socket = None
+                    last_reconnect_attempt = time.time()
 
             # --- EKRAN BİLGİ PANELİ (OSD) ---
             # Üst panel arkaplanı
@@ -301,7 +412,7 @@ def start_uav_vision(video_name, uav_id, uav_name):
             # Yazılar...
             cv2.putText(frame, f"[{uav_id}] {uav_name}", (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
             cv2.putText(frame, f"BAT: {telemetry_data['battery']:.1f}%", (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            cv2.putText(frame, f"OCR DURUMU: {'AKTIF' if frame_counter % 10 == 0 else 'BEKLEMEDE'}", (350, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 2)
+            cv2.putText(frame, f"OCR (ASENKRON) KUYRUK: {ocr_queue.qsize()}", (350, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 2)
             
             cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
             cv2.resizeWindow(window_name, 1280, 720)
@@ -311,8 +422,11 @@ def start_uav_vision(video_name, uav_id, uav_name):
                break
 
     finally:
-        if connected:
-            client_socket.close()
+        if client_socket is not None:
+            try:
+                client_socket.close()
+            except Exception:
+                pass
         cap.release()
         cv2.destroyAllWindows()
         logging.info(f"🛑 [{uav_name}] SVT Operasyon Sonlandırıldı")
@@ -325,11 +439,13 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
+    # NOT: Video (Flask) portu, GCS'in TCP veri portundan (5050) AYRI tutulur; yoksa
+    # UAV-001 için 5050 çakışır ve video sunucusu başlayamaz. Bu yüzden taban 8090.
     try:
         id_num = int(''.join(filter(str.isdigit, args.id)))
-        calculated_port = 5050 + (id_num - 1)
+        calculated_port = 8090 + (id_num - 1)  # UAV-001 -> 8090, UAV-002 -> 8091 ...
     except:
-        calculated_port = 5050
+        calculated_port = 8090
 
     print("🎬 KAMERA VE AI SİSTEMİ BAŞLATILIYOR...")
     print(f"🚁 KİMLİK: {args.id}")

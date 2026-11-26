@@ -4,10 +4,12 @@ using System.Linq;
 using GCS_Module.Data;
 using GCS_Module.Models;
 using GCS_Module.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GCS_Module.Controllers
 {
+    [Authorize]
     public class ReportController : Controller
     {
         private readonly AppDbContext _context;

@@ -2,3 +2,5 @@ opencv-python==4.8.1.78
 ultralytics==8.0.196
 pycryptodome==3.19.0
 python-dotenv==1.0.0
+flask==3.0.0
+easyocr==1.7.1

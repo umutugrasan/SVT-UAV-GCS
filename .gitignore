@@ -1,0 +1,70 @@
+# ============================================================
+#  SVT Projesi — .gitignore
+#  .NET (GCS) + Python (UAV) derleme/ara çıktıları
+# ============================================================
+
+# ---------- .NET / Visual Studio ----------
+# Derleme çıktıları
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Rr]elease/
+
+# Visual Studio klasörü ve kullanıcı dosyaları
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vsp
+*.vspx
+
+# Build / log çıktıları
+*.binlog
+msbuild.log
+run_out*.log
+run_err*.log
+
+# ---------- Python / UAV modülü ----------
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+ENV/
+.Python
+*.egg-info/
+.pytest_cache/
+
+# Python / çalışma logları
+*.log
+uav_module.log
+
+# EasyOCR önbelleği
+.EasyOCR/
+
+# ---------- Veritabanı ----------
+*.mdf
+*.ldf
+*.db
+*.db-shm
+*.db-wal
+
+# ---------- İşletim sistemi ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- Editör ----------
+.idea/
+*.swp
+*~
+
+# ---------- Ortam / sırlar ----------
+# Geliştirme ayarları ve gizli anahtarlar repoya girmez
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+.env

@@ -108,16 +108,3 @@ if __name__ == "__main__":
         time.sleep(0.5)
     
     print("\n✅ Test tamamlandı!")
-
-
-
-
-## Dosya Yapısı
-
-# UAV_Module_Python/
-# ├── uav_module.py          ← Güncellendi
-# ├── telemetry_simulator.py ← YENİ
-# ├── security_utils.py
-# ├── gps_simulator.py
-# ├── config.py
-# └── .env

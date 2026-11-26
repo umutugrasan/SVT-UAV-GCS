@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 using GCS_Module.Data;
+using GCS_Module.Helpers;
 using GCS_Module.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -30,7 +29,7 @@ namespace GCS_Module.Controllers
                 _context.Users.Add(new User
                 {
                     Username = "admin",
-                    PasswordHash = HashPassword("admin123"),
+                    PasswordHash = PasswordHasher.HashPassword("admin123"),
                     FullName = "Sistem Yöneticisi",
                     Role = "Admin"
                 });
@@ -57,10 +56,17 @@ namespace GCS_Module.Controllers
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Username == model.Username);
 
-            if (user == null || user.PasswordHash != HashPassword(model.Password))
+            if (user == null ||
+                !PasswordHasher.VerifyPassword(model.Password, user.PasswordHash, out bool needsUpgrade))
             {
                 ModelState.AddModelError("", "Geçersiz kullanıcı adı veya şifre");
                 return View(model);
+            }
+
+            // Eski (SHA256) hash ile giriş yapıldıysa, şeffaf şekilde PBKDF2'ye yükselt.
+            if (needsUpgrade)
+            {
+                user.PasswordHash = PasswordHasher.HashPassword(model.Password);
             }
 
             user.LastLogin = DateTime.Now;
@@ -94,13 +100,6 @@ namespace GCS_Module.Controllers
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Login");
-        }
-
-        private static string HashPassword(string password)
-        {
-            using var sha256 = SHA256.Create();
-            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password + "SVT_SALT_2024"));
-            return Convert.ToBase64String(bytes);
         }
     }
 }

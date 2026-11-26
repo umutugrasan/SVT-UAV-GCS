@@ -18,13 +18,22 @@ namespace GCS_Module.Helpers
         // ============================================================
         public SecurityHelper(IConfiguration configuration)
         {
-            // appsettings.json'dan anahtar oku
-            var keyString = configuration["Security:AesKey"];
+            // Anahtar önceliği:
+            //   1) Ortam değişkeni  SVT_AES_KEY   (önerilen — repoya girmez)
+            //   2) appsettings*.json içindeki  Security:AesKey
+            // Python (UAV) tarafı da aynı anahtarı kullanmalıdır.
+            var keyString = Environment.GetEnvironmentVariable("SVT_AES_KEY");
+
+            if (string.IsNullOrEmpty(keyString))
+            {
+                keyString = configuration["Security:AesKey"];
+            }
 
             if (string.IsNullOrEmpty(keyString))
             {
                 throw new InvalidOperationException(
-                    "AES anahtarı bulunamadı! appsettings.json'da 'Security:AesKey' tanımlayın."
+                    "AES anahtarı bulunamadı! 'SVT_AES_KEY' ortam değişkenini ya da " +
+                    "appsettings.json içinde 'Security:AesKey' değerini tanımlayın."
                 );
             }
 

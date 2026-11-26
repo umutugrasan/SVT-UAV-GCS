@@ -1,0 +1,302 @@
+/* dashboard.css — Index.cshtml'den ayrilan panel stilleri */
+
+    .animate-blink {
+        animation: blinker 1.5s linear infinite;
+    }
+
+    @keyframes blinker {
+        50% {
+            opacity: 0;
+        }
+    }
+
+        /* Canlı Yayın Efekti */
+        .animate-pulse {
+            animation: blink 1.5s infinite;
+        }
+        @keyframes blink {
+            0%
+
+        {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.4;
+        }
+
+        100% {
+            opacity: 1;
+        }
+
+        }
+        /* ===== GAUGE STYLES ===== */
+        .gauge-container, .speedometer {
+            position: relative;
+            width: 100%;
+            max-width: 120px;
+            margin: 0 auto;
+        }
+
+        .gauge-svg {
+            width: 100%;
+            height: auto;
+        }
+
+        .gauge-value {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+            .gauge-value i {
+                display: block;
+                font-size: 1.2rem;
+                margin-bottom: 2px;
+            }
+
+        /* ===== ALTITUDE BAR ===== */
+        .altitude-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .altitude-bar-container {
+            width: 20px;
+            height: 80px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .altitude-bar {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(to top, #28a745, #17a2b8);
+            border-radius: 10px;
+            transition: height 0.3s ease;
+        }
+
+        .altitude-value {
+            text-align: center;
+        }
+
+            .altitude-value i {
+                display: block;
+                font-size: 1.5rem;
+                color: #17a2b8;
+            }
+
+            .altitude-value span {
+                font-weight: bold;
+                font-size: 1.1rem;
+            }
+
+        /* ===== COMPASS ===== */
+        .compass-container {
+            text-align: center;
+        }
+
+        .compass {
+            width: 70px;
+            height: 70px;
+            border: 3px solid #333;
+            border-radius: 50%;
+            margin: 0 auto 5px;
+            position: relative;
+            background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+        }
+
+        .compass-arrow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 30px;
+            background: linear-gradient(to top, #dc3545 50%, #333 50%);
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate(0deg);
+            border-radius: 2px;
+            transition: transform 0.3s ease;
+        }
+
+        .compass-labels span {
+            position: absolute;
+            font-size: 0.6rem;
+            font-weight: bold;
+        }
+
+        .compass-labels .n {
+            top: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #dc3545;
+        }
+
+        .compass-labels .s {
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .compass-labels .e {
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .compass-labels .w {
+            left: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .heading-value {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        /* ===== SIGNAL BARS ===== */
+        .signal-display {
+            text-align: center;
+        }
+
+        .signal-bars {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 3px;
+            height: 50px;
+            margin-bottom: 5px;
+        }
+
+        .signal-bar {
+            width: 10px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+            .signal-bar:nth-child(1) {
+                height: 20%;
+            }
+
+            .signal-bar:nth-child(2) {
+                height: 40%;
+            }
+
+            .signal-bar:nth-child(3) {
+                height: 60%;
+            }
+
+            .signal-bar:nth-child(4) {
+                height: 80%;
+            }
+
+            .signal-bar:nth-child(5) {
+                height: 100%;
+            }
+
+            .signal-bar.active {
+                background: #28a745;
+            }
+
+            .signal-bar.warning {
+                background: #ffc107;
+            }
+
+            .signal-bar.danger {
+                background: #dc3545;
+            }
+
+        .signal-value {
+            font-weight: bold;
+        }
+
+        /* ===== FLIGHT TIME ===== */
+        .flight-time-display {
+            padding: 10px 0;
+        }
+
+        .flight-time-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            margin-top: 5px;
+        }
+
+        /* ===== TABLE ANIMATION ===== */
+        .animate-row {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        /* ===== THREAT ANIMATION ===== */
+        .threat-alert-icon {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        /* ===== THREAT LOG ROW HIGHLIGHT ===== */
+        @keyframes highlightRow {
+            0% {
+                background-color: #ff6b6b;
+            }
+
+            100% {
+                background-color: transparent;
+            }
+        }
+
+        /* ===== DARK MODE ===== */
+        [data-theme="dark"] .compass {
+            background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+            border-color: #555;
+        }
+
+        [data-theme="dark"] .compass-labels span {
+            color: #ccc;
+        }
+
+        [data-theme="dark"] .compass-labels .n {
+            color: #dc3545;
+        }
+
+        [data-theme="dark"] .altitude-bar-container,
+        [data-theme="dark"] .signal-bar {
+            background: #333;
+        }
